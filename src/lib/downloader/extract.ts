@@ -58,6 +58,8 @@ export function looksLikeMedia(url: string): boolean {
   if (MEDIA_EXT.test(clean)) return true;
   if (/picsum\.photos\/(?:id\/\d+|\d+)/i.test(clean)) return true;
   if (/\/id\/\d+\/\d+\/\d+/.test(clean)) return true;
+  if (/\/attachments\/\d+/i.test(clean)) return true;
+  if (/\/data\/attachments\//i.test(clean)) return true;
   return false;
 }
 
@@ -176,7 +178,7 @@ export function extractFromHtml(html: string, baseUrl: string): {
       }
       continue;
     }
-    for (const name of ["src", "data-src", "data-original", "data-lazy-src", "data-full", "data-url", "data-file", "poster", "href"]) {
+    for (const name of ["src", "data-src", "data-original", "data-lazy-src", "data-full", "data-url", "data-file", "data-src-hd", "poster", "href"]) {
       const v = attrs.match(new RegExp(`${name}=["']([^"']+)`, "i"))?.[1];
       if (!v) continue;
       if (name === "href" && !looksLikeMedia(v) && !/\/attachments?\//i.test(v)) continue;

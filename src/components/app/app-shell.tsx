@@ -101,7 +101,7 @@ export function AppShell() {
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">
             <h1 className="font-display text-base font-semibold tracking-tight">{APP_NAME}</h1>
-            <span className="hidden text-xs text-subtle sm:inline">v1.1</span>
+            <span className="hidden text-xs text-subtle sm:inline">v1.2</span>
           </div>
           <p className="truncate text-xs text-muted-foreground">{APP_TAGLINE}</p>
         </div>

@@ -1,12 +1,13 @@
-# Fathomrail desktop (C#)
+# Fathomrail desktop
 
-Avalonia / .NET 8 companion to the Fathomrail web app: same five-stage pipeline, live monitor, Chrome cookie import, folder picker, forum/post organization.
+The shipping Windows build is **Electron** wrapping the same UI as the live preview (`electron/`).
 
 ```
-dotnet publish src/SimpDownloader.App/SimpDownloader.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableWindowsTargeting=true -o dist/portable
+npm run build
+npx electron-builder --win zip --x64
 ```
 
-- **Portable ZIP** — `Fathomrail.exe` + README. Extract and run.
-- **Setup wizard** — `Fathomrail-Setup.exe` embeds the portable zip. Choose install directory, desktop + Start Menu shortcuts.
+Portable zip: extract and run `Fathomrail.exe`.
+Setup wizard: `desktop/src/SimpDownloader.Setup` embeds that zip.
 
-Published Windows builds: https://github.com/Saiki1997/Fathomrail/releases
+The older Avalonia C# project in this folder is a fallback, not the product UI.

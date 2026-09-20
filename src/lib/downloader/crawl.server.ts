@@ -80,7 +80,17 @@ async function fetchText(
   const buf = await res.arrayBuffer();
   if (buf.byteLength > 2_500_000) throw new Error("Page is too large to parse");
   const body = new TextDecoder("utf-8", { fatal: false }).decode(buf);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    if (/ddos-guard|cf-challenge|just a moment|checking your browser|access forbidden|forums are currently closed/i.test(body)) {
+      throw new Error(
+        `HTTP ${res.status} — this host is blocking anonymous crawls (bot check or login). Open the thread in Chrome, then Settings → import cookies, and retry.`,
+      );
+    }
+    if (res.status === 403) {
+      throw new Error("HTTP 403 Forbidden — import cookies from a logged-in Chrome session and retry.");
+    }
+    throw new Error(`HTTP ${res.status}`);
+  }
   return { url: finalUrl, contentType, body, status: res.status };
 }
 

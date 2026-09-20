@@ -1,0 +1,31 @@
+appId: app.fathomrail.desktop
+productName: Fathomrail
+copyright: MIT
+directories:
+  output: dist-electron
+files:
+  - electron/**
+  - package.json
+  - "!node_modules/**"
+npmRebuild: false
+extraResources:
+  - from: .vercel/output/static
+    to: output/static
+  - from: .vercel/output/functions/__server.func
+    to: output/server
+asar: true
+forceCodeSigning: false
+win:
+  target:
+    - target: zip
+      arch:
+        - x64
+  artifactName: Fathomrail-Portable.${ext}
+  signAndEditExecutable: false
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Fathomrail
+  artifactName: Fathomrail-Setup.${ext}

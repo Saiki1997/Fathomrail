@@ -1,0 +1,78 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="SimpDownloader.App.MainWindow"
+        Title="Fathomrail"
+        Width="1180" Height="760"
+        MinWidth="840" MinHeight="560"
+        Background="#0B0B0C"
+        Foreground="#F3F3F4">
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Padding="16,12" BorderBrush="#26F3F3F4" BorderThickness="0,0,0,1">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <StackPanel Spacing="2">
+          <TextBlock FontSize="16" FontWeight="SemiBold" Text="SimpDownloader"/>
+          <TextBlock FontSize="11" Foreground="#9A9AA3" Text="C# rebuild  ·  crawl → discover → resolve → download → finalize"/>
+        </StackPanel>
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <TextBlock x:Name="HdrStats" FontFamily="Consolas" FontSize="12" Foreground="#9A9AA3" VerticalAlignment="Center"/>
+          <Button x:Name="BtnSettings" Content="Settings"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Border DockPanel.Dock="Top" Padding="16,12" BorderBrush="#26F3F3F4" BorderThickness="0,0,0,1">
+      <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+        <TextBlock Text="Seed URLs — one per line" FontSize="11" Foreground="#9A9AA3" Margin="0,0,0,6"/>
+        <TextBox x:Name="UrlBox" Grid.Row="1" AcceptsReturn="True" Height="64" Watermark="https://example.com/gallery"
+                 FontFamily="Consolas" FontSize="12"/>
+        <StackPanel Grid.Column="1" Grid.Row="1" Orientation="Horizontal" Spacing="8" Margin="12,0,0,0" VerticalAlignment="Bottom">
+          <ComboBox x:Name="ProfileBox" Width="120" SelectedIndex="1">
+            <ComboBoxItem Content="Fast"/>
+            <ComboBoxItem Content="Balanced"/>
+            <ComboBoxItem Content="Deep"/>
+          </ComboBox>
+          <Button x:Name="BtnRun" Content="Run"/>
+          <Button x:Name="BtnPause" Content="Pause" IsEnabled="False"/>
+          <Button x:Name="BtnStop" Content="Stop" IsEnabled="False"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <UniformGrid DockPanel.Dock="Top" Columns="5" Margin="16,8">
+      <TextBlock x:Name="StCrawl" Text="CRAWL" FontSize="11" HorizontalAlignment="Center"/>
+      <TextBlock x:Name="StDiscover" Text="DISCOVER" FontSize="11" HorizontalAlignment="Center"/>
+      <TextBlock x:Name="StResolve" Text="RESOLVE" FontSize="11" HorizontalAlignment="Center"/>
+      <TextBlock x:Name="StDownload" Text="DOWNLOAD" FontSize="11" HorizontalAlignment="Center"/>
+      <TextBlock x:Name="StFinalize" Text="FINALIZE" FontSize="11" HorizontalAlignment="Center"/>
+    </UniformGrid>
+
+    <Border DockPanel.Dock="Bottom" Height="220" BorderBrush="#26F3F3F4" BorderThickness="0,1,0,0">
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Top" Margin="16,8" FontSize="11" Foreground="#9A9AA3" Text="DOWNLOAD MONITOR"/>
+        <DataGrid x:Name="GridItems" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column"
+                  Background="#121214" GridLinesVisibility="Horizontal">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="File" Binding="{Binding Filename}" Width="*"/>
+            <DataGridTextColumn Header="Phase" Binding="{Binding Phase}" Width="100"/>
+            <DataGridTextColumn Header="Done" Binding="{Binding BytesDone}" Width="90"/>
+            <DataGridTextColumn Header="Total" Binding="{Binding BytesTotal}" Width="90"/>
+            <DataGridTextColumn Header="Error" Binding="{Binding Error}" Width="*"/>
+          </DataGrid.Columns>
+        </DataGrid>
+      </DockPanel>
+    </Border>
+
+    <Grid ColumnDefinitions="*,280">
+      <DockPanel Margin="16">
+        <TextBlock x:Name="PreviewTitle" DockPanel.Dock="Top" FontSize="14" FontWeight="Medium" Text="Ready when you are" Margin="0,0,0,8"/>
+        <ListBox x:Name="MediaList"/>
+      </DockPanel>
+      <Border Grid.Column="1" BorderBrush="#26F3F3F4" BorderThickness="1,0,0,0" Padding="12">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Top" FontSize="11" Foreground="#9A9AA3" Text="ACTIVITY" Margin="0,0,0,8"/>
+          <ListBox x:Name="LogList" FontFamily="Consolas" FontSize="11"/>
+        </DockPanel>
+      </Border>
+    </Grid>
+  </DockPanel>
+</Window>

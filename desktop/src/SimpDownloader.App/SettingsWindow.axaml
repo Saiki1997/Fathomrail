@@ -1,0 +1,41 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="SimpDownloader.App.SettingsWindow"
+        Title="Settings" Width="480" Height="640"
+        WindowStartupLocation="CenterOwner"
+        Background="#16161A" Foreground="#F3F3F4">
+  <ScrollViewer Padding="20">
+    <StackPanel Spacing="10">
+      <TextBlock Text="Download location"/>
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBox x:Name="RootBox"/>
+        <Button x:Name="BtnBrowse" Grid.Column="1" Content="Browse" Margin="8,0,0,0"/>
+      </Grid>
+      <TextBlock Text="Folder name"/>
+      <TextBox x:Name="FolderBox"/>
+      <TextBlock Text="Organize by"/>
+      <ComboBox x:Name="OrganizeBox" SelectedIndex="3">
+        <ComboBoxItem Content="One folder"/>
+        <ComboBoxItem Content="Post ID"/>
+        <ComboBoxItem Content="Forum ID"/>
+        <ComboBoxItem Content="Forum / post"/>
+      </ComboBox>
+      <CheckBox x:Name="NumberBox" Content="Number files in page order (001, 002, …)"/>
+      <CheckBox x:Name="SeqBox" Content="Download strictly in order"/>
+      <TextBlock Text="Workers"/>
+      <NumericUpDown x:Name="WorkersBox" Minimum="1" Maximum="8"/>
+      <TextBlock Text="Retries"/>
+      <NumericUpDown x:Name="RetriesBox" Minimum="0" Maximum="6"/>
+      <TextBlock Text="Max file size (MB)"/>
+      <NumericUpDown x:Name="MaxBox" Minimum="1" Maximum="80"/>
+      <CheckBox x:Name="ImgBox" Content="Images"/>
+      <CheckBox x:Name="VidBox" Content="Videos"/>
+      <CheckBox x:Name="AudBox" Content="Audio"/>
+      <CheckBox x:Name="DupBox" Content="Skip duplicate URLs"/>
+      <TextBlock Text="Cookies"/>
+      <TextBox x:Name="CookieBox" AcceptsReturn="True" Height="90" FontFamily="Consolas" FontSize="11"/>
+      <Button x:Name="BtnChrome" Content="Load cookies from Google Chrome"/>
+      <Button x:Name="BtnOk" Content="Save" HorizontalAlignment="Right"/>
+    </StackPanel>
+  </ScrollViewer>
+</Window>

@@ -3,11 +3,38 @@ using System.Text.RegularExpressions;
 
 namespace SimpDownloader.Core;
 
+public sealed class ExtractedMedia
+{
+    public string Url { get; init; } = "";
+    public MediaKind Kind { get; init; }
+    public string? PostId { get; init; }
+    public string? ForumId { get; init; }
+    public string? ThreadId { get; init; }
+    public string Extractor { get; init; } = "html-generic";
+}
+
+public sealed class ExtractedPage
+{
+    public List<ExtractedMedia> Media { get; init; } = new();
+    public List<string> Links { get; init; } = new();
+    public List<string> Pagination { get; init; } = new();
+    public string? Title { get; init; }
+    public string? ForumId { get; init; }
+    public string? ThreadId { get; init; }
+    public string Extractor { get; init; } = "html-generic";
+}
+
 public static class MediaExtractor
 {
     static readonly Regex MediaExt = new(
         @"\.(jpe?g|png|gif|webp|avif|bmp|svg|mp4|webm|mkv|mov|m4v|avi|mp3|m4a|flac|wav|ogg|opus)(?:$|\?)",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    static readonly HashSet<string> JsonKeys = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "download_url", "downloadurl", "file_url", "image_url", "media_url", "contenturl", "original", "original_url",
+        "full", "full_url", "src", "source", "url", "image", "media", "file", "video", "audio"
+    };
 
     public static MediaKind KindFrom(string url, string? mime = null)
     {
@@ -22,7 +49,16 @@ public static class MediaExtractor
         return MediaKind.Other;
     }
 
-    public static bool LooksLikeMedia(string url) => MediaExt.IsMatch(url.Split('#')[0]);
+    public static bool LooksLikeMedia(string url)
+    {
+        var clean = url.Split('#')[0];
+        if (MediaExt.IsMatch(clean)) return true;
+        if (Regex.IsMatch(clean, @"picsum\.photos/(?:id/\d+|\d+)", RegexOptions.IgnoreCase)) return true;
+        if (Regex.IsMatch(clean, @"/id/\d+/\d+/\d+")) return true;
+        return false;
+    }
+
+    public static bool IsStreamManifest(string url) => Regex.IsMatch(url, @"\.(m3u8|mpd)(?:$|\?)", RegexOptions.IgnoreCase);
 
     public static string FilenameFrom(string url)
     {
@@ -45,91 +81,168 @@ public static class MediaExtractor
         return name.Length == 0 ? "download" : name[..Math.Min(180, name.Length)];
     }
 
-    public static (List<(string Url, MediaKind Kind)> Media, List<string> Links, string? Title) FromHtml(string html, string baseUrl)
+    static string? Accept(string raw, string baseUrl)
     {
-        var media = new Dictionary<string, MediaKind>();
-        var title = Regex.Match(html, @"<title[^>]*>([^<]{1,200})", RegexOptions.IgnoreCase).Groups[1].Value;
-        if (string.IsNullOrWhiteSpace(title)) title = null;
+        var url = Canonical.Abs(raw, baseUrl);
+        if (url == null || IsStreamManifest(url)) return null;
+        var upgraded = Canonical.UpgradeOriginal(url);
+        if (LooksLikeMedia(upgraded)) return Canonical.Canonicalize(upgraded);
+        if (Regex.IsMatch(upgraded, @"/(?:images?|media|files?|attachments?|cdn)/", RegexOptions.IgnoreCase)
+            && !Regex.IsMatch(upgraded, @"/(?:css|js|fonts?)/", RegexOptions.IgnoreCase))
+            return Canonical.Canonicalize(upgraded);
+        return null;
+    }
 
-        void Add(string raw)
+    public static ExtractedPage FromHtml(string html, string baseUrl)
+    {
+        var ids = ThreadIdParser.Parse(baseUrl);
+        var forumId = ids.ForumId ?? ForumFromHtml(html);
+        var threadId = ids.ThreadId;
+        var titleM = Regex.Match(html, @"<title[^>]*>([^<]{1,200})", RegexOptions.IgnoreCase);
+        var title = titleM.Success ? Canonical.DecodeEntities(titleM.Groups[1].Value.Trim()) : null;
+        var extractor = threadId != null || forumId != null ? "forum-thread" : Canonical.LooksLikeAlbum(baseUrl) ? "album" : "html-generic";
+        var media = new List<ExtractedMedia>();
+        var seen = new HashSet<string>();
+        var keys = new Dictionary<string, int>();
+        var currentPost = ids.PostId;
+
+        void Push(string raw, string ext)
         {
-            if (!Uri.TryCreate(new Uri(baseUrl), raw.Replace("&", "&").Trim(), out var u)) return;
-            if (u.Scheme is not ("http" or "https")) return;
-            var s = u.GetLeftPart(UriPartial.Query);
-            if (!LooksLikeMedia(s) && !s.Contains("picsum.photos", StringComparison.OrdinalIgnoreCase)
-                && !s.Contains("images", StringComparison.OrdinalIgnoreCase)
-                && !s.Contains("media", StringComparison.OrdinalIgnoreCase))
+            var url = Accept(raw, baseUrl);
+            if (url == null) return;
+            var key = Canonical.MediaKey(url);
+            if (keys.TryGetValue(key, out var idx))
+            {
+                var prev = media[idx];
+                if (Canonical.IsThumb(prev.Url) && !Canonical.IsThumb(url))
+                    media[idx] = new ExtractedMedia { Url = url, Kind = KindFrom(url), PostId = currentPost, ForumId = forumId, ThreadId = threadId, Extractor = ext };
                 return;
-            media.TryAdd(s, KindFrom(s));
+            }
+            if (!seen.Add(url)) return;
+            keys[key] = media.Count;
+            media.Add(new ExtractedMedia { Url = url, Kind = KindFrom(url), PostId = currentPost, ForumId = forumId, ThreadId = threadId, Extractor = ext });
         }
 
-        foreach (Match tag in Regex.Matches(html, @"<(img|source|video|audio|embed|meta|a)([^>]*?)>", RegexOptions.IgnoreCase))
+        foreach (Match block in Regex.Matches(html, @"<script[^>]*type=[""']application/ld\+json[""'][^>]*>([\s\S]*?)</script>", RegexOptions.IgnoreCase))
+            foreach (var item in FromJson(block.Groups[1].Value, baseUrl, "json-ld"))
+                Push(item.Url, item.Extractor);
+
+        var next = Regex.Match(html, @"<script[^>]*id=[""']__NEXT_DATA__[""'][^>]*>([\s\S]*?)</script>", RegexOptions.IgnoreCase);
+        if (next.Success)
+            foreach (var item in FromJson(next.Groups[1].Value, baseUrl, "next-data"))
+                Push(item.Url, item.Extractor);
+
+        foreach (Match tag in Regex.Matches(html, @"<(article|li|div|section|img|source|video|audio|embed|a|meta|link)([^>]*?)>", RegexOptions.IgnoreCase))
         {
             var name = tag.Groups[1].Value.ToLowerInvariant();
             var attrs = tag.Groups[2].Value;
+            if (name is "article" or "li" or "div" or "section")
+            {
+                var pid = ThreadIdParser.PostFromAttrs(attrs);
+                if (pid != null) currentPost = pid;
+                continue;
+            }
             if (name == "meta")
             {
                 var prop = Regex.Match(attrs, @"(?:property|name)=[""']([^""']+)", RegexOptions.IgnoreCase).Groups[1].Value.ToLowerInvariant();
-                if (prop.Contains("og:image") || prop.Contains("twitter:image") || prop.Contains("og:video"))
+                if (Regex.IsMatch(prop, @"og:image|twitter:image|og:video|og:audio|twitter:player:stream"))
                 {
                     var content = Regex.Match(attrs, @"content=[""']([^""']+)", RegexOptions.IgnoreCase).Groups[1].Value;
-                    if (!string.IsNullOrEmpty(content)) Add(content);
+                    if (content.Length > 0) Push(content, "opengraph");
                 }
                 continue;
             }
-            foreach (var attr in new[] { "src", "data-src", "data-original", "data-lazy-src", "data-url", "poster", "href" })
+            foreach (var attr in new[] { "src", "data-src", "data-original", "data-lazy-src", "data-full", "data-url", "data-file", "poster", "href" })
             {
                 var v = Regex.Match(attrs, attr + @"=[""']([^""']+)", RegexOptions.IgnoreCase).Groups[1].Value;
                 if (string.IsNullOrEmpty(v)) continue;
-                if (attr == "href" && !LooksLikeMedia(v)) continue;
-                Add(v);
+                if (attr == "href" && !LooksLikeMedia(v) && !v.Contains("/attachment", StringComparison.OrdinalIgnoreCase)) continue;
+                Push(v, extractor);
+            }
+            var srcset = Regex.Match(attrs, @"(?:srcset|data-srcset)=[""']([^""']+)", RegexOptions.IgnoreCase).Groups[1].Value;
+            if (!string.IsNullOrEmpty(srcset))
+            {
+                var best = Canonical.BestSrcset(srcset);
+                if (best != null) Push(best, extractor);
             }
         }
 
         var links = new List<string>();
-        var seen = new HashSet<string>();
-        if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri)) baseUri = new Uri("https://example.invalid/");
-        foreach (Match a in Regex.Matches(html, @"<a[^>]+href=[""']([^""'#]+)[""']", RegexOptions.IgnoreCase))
+        var pagination = new List<string>();
+        var seenLinks = new HashSet<string>();
+        Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri);
+        var baseHost = baseUri?.Host ?? "";
+
+        foreach (Match tag in Regex.Matches(html, @"<(?:link|a)[^>]+rel=[""'][^""']*next[^""']*[""'][^>]*>", RegexOptions.IgnoreCase))
         {
-            if (!Uri.TryCreate(baseUri, a.Groups[1].Value, out var u)) continue;
-            if (!u.Host.Equals(baseUri.Host, StringComparison.OrdinalIgnoreCase)) continue;
-            if (LooksLikeMedia(u.AbsoluteUri)) continue;
-            if (seen.Add(u.AbsoluteUri)) links.Add(u.AbsoluteUri);
+            var href = Regex.Match(tag.Value, @"href=[""']([^""']+)", RegexOptions.IgnoreCase).Groups[1].Value;
+            var resolved = href.Length > 0 ? Canonical.Abs(href, baseUrl) : null;
+            if (resolved != null) pagination.Add(Canonical.Canonicalize(resolved));
         }
 
-        return (media.Select(kv => (kv.Key, kv.Value)).ToList(), links, title);
+        foreach (Match a in Regex.Matches(html, @"<a[^>]+href=[""']([^""']+)[""']", RegexOptions.IgnoreCase))
+        {
+            var resolved = Canonical.Abs(a.Groups[1].Value, baseUrl);
+            if (resolved == null) continue;
+            var canon = Canonical.Canonicalize(resolved);
+            if (!seenLinks.Add(canon)) continue;
+            if (LooksLikeMedia(resolved)) { Push(resolved, extractor); continue; }
+            if (!Uri.TryCreate(resolved, UriKind.Absolute, out var u)) continue;
+            if (Canonical.LooksLikePagination(resolved) && u.Host.Equals(baseHost, StringComparison.OrdinalIgnoreCase))
+            {
+                pagination.Add(canon);
+                continue;
+            }
+            var same = u.Host.Equals(baseHost, StringComparison.OrdinalIgnoreCase);
+            if (!same && !Canonical.LooksLikeAlbum(resolved)) continue;
+            if (Regex.IsMatch(u.AbsolutePath, @"\.(css|js|xml|json)$", RegexOptions.IgnoreCase)) continue;
+            links.Add(canon);
+        }
+
+        return new ExtractedPage
+        {
+            Media = media,
+            Links = links,
+            Pagination = pagination,
+            Title = string.IsNullOrWhiteSpace(title) ? null : title,
+            ForumId = forumId,
+            ThreadId = threadId,
+            Extractor = extractor
+        };
     }
 
-    public static List<(string Url, MediaKind Kind)> FromJson(string text, string baseUrl)
+    public static List<ExtractedMedia> FromJson(string text, string baseUrl, string extractor = "json-feed")
     {
-        var media = new Dictionary<string, MediaKind>();
-        void Add(string raw)
+        var ids = ThreadIdParser.Parse(baseUrl);
+        var media = new List<ExtractedMedia>();
+        var seen = new HashSet<string>();
+        void Push(string raw)
         {
-            if (!Uri.TryCreate(raw, UriKind.Absolute, out var u) && !Uri.TryCreate(new Uri(baseUrl), raw, out u)) return;
-            media.TryAdd(u.AbsoluteUri, KindFrom(u.AbsoluteUri));
+            var url = Accept(raw, baseUrl);
+            if (url == null || !seen.Add(url)) return;
+            media.Add(new ExtractedMedia { Url = url, Kind = KindFrom(url), PostId = ids.PostId, ForumId = ids.ForumId, ThreadId = ids.ThreadId, Extractor = extractor });
         }
         try
         {
             using var doc = JsonDocument.Parse(text);
-            Walk(doc.RootElement);
-            void Walk(JsonElement el)
+            Walk(doc.RootElement, null);
+            void Walk(JsonElement el, string? parentKey)
             {
                 switch (el.ValueKind)
                 {
                     case JsonValueKind.String:
                         var s = el.GetString();
-                        if (s != null && (s.StartsWith("http") || LooksLikeMedia(s))) Add(s);
+                        if (s == null) return;
+                        var key = (parentKey ?? "").ToLowerInvariant();
+                        var loose = Regex.IsMatch(key, @"download|original|image|video|audio|media|contenturl|file_url");
+                        if ((JsonKeys.Contains(key) || LooksLikeMedia(s)) && (LooksLikeMedia(s) || loose))
+                            Push(s);
                         break;
                     case JsonValueKind.Array:
-                        foreach (var c in el.EnumerateArray()) Walk(c);
+                        foreach (var c in el.EnumerateArray()) Walk(c, parentKey);
                         break;
                     case JsonValueKind.Object:
-                        foreach (var p in el.EnumerateObject())
-                        {
-                            if (p.Name is "download_url" or "url" or "src" or "image" or "media" or "file" && p.Value.ValueKind == JsonValueKind.String)
-                                Add(p.Value.GetString()!);
-                            else Walk(p.Value);
-                        }
+                        foreach (var p in el.EnumerateObject()) Walk(p.Value, p.Name);
                         break;
                 }
             }
@@ -139,9 +252,15 @@ public static class MediaExtractor
             foreach (var line in text.Split('\n'))
             {
                 var t = line.Trim();
-                if (t.StartsWith("http")) Add(t);
+                if (LooksLikeMedia(t)) Push(t);
             }
         }
-        return media.Select(kv => (kv.Key, kv.Value)).ToList();
+        return media;
+    }
+
+    static string? ForumFromHtml(string html)
+    {
+        var m = Regex.Match(html, @"data-forum-id=[""'](\d+)", RegexOptions.IgnoreCase);
+        return m.Success ? m.Groups[1].Value : null;
     }
 }

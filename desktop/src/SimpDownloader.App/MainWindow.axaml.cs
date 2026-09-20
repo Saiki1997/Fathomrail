@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
 using System.Net.Http;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using SimpDownloader.Core;
 
@@ -14,6 +16,9 @@ public partial class MainWindow : Window
     readonly HttpClient _http = new(new HttpClientHandler { AllowAutoRedirect = true }) { Timeout = TimeSpan.FromMinutes(2) };
     CancellationTokenSource? _cts;
     bool _paused;
+    bool _running;
+    string? _lastClip;
+    DateTimeOffset _started;
 
     public MainWindow()
     {
@@ -32,8 +37,38 @@ public partial class MainWindow : Window
         {
             var dlg = new SettingsWindow(_settings);
             await dlg.ShowDialog(this);
+            ApplyTheme();
+            BtnClip.IsChecked = _settings.ClipboardWatch;
         };
+        BtnTheme.IsCheckedChanged += (_, _) =>
+        {
+            _settings.LightTheme = BtnTheme.IsChecked == true;
+            ApplyTheme();
+        };
+        BtnClip.IsCheckedChanged += (_, _) => _settings.ClipboardWatch = BtnClip.IsChecked == true;
+        BtnHashes.Click += (_, _) => ExportHashes();
+        var clipTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1200) };
+        clipTimer.Tick += async (_, _) => await PollClipboard();
+        clipTimer.Start();
+        var schedTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(15) };
+        schedTimer.Tick += async (_, _) =>
+        {
+            if (!_settings.SchedulerEnabled || _running || _settings.NextRunAt is not { } next) return;
+            if (DateTimeOffset.UtcNow < next) return;
+            _settings.NextRunAt = DateTimeOffset.UtcNow.AddMinutes(Math.Max(5, _settings.SchedulerMinutes));
+            Log($"Scheduler firing · next {_settings.NextRunAt:t}");
+            await RunAsync();
+        };
+        schedTimer.Start();
+        ApplyTheme();
         Log("Idle. Paste a URL and press Run. Only download content you are authorized to access.");
+    }
+
+    void ApplyTheme()
+    {
+        if (Application.Current != null)
+            Application.Current.RequestedThemeVariant = _settings.LightTheme ? ThemeVariant.Light : ThemeVariant.Dark;
+        BtnTheme.IsChecked = _settings.LightTheme;
     }
 
     void Log(string msg) => Dispatcher.UIThread.Post(() =>
@@ -45,7 +80,8 @@ public partial class MainWindow : Window
     {
         TextBlock[] rails = [StCrawl, StDiscover, StResolve, StDownload, StFinalize];
         for (var i = 0; i < rails.Length; i++)
-            rails[i].Foreground = new SolidColorBrush(i == idx ? Color.Parse("#F3F3F4") : i < idx ? Color.Parse("#7DBA98") : Color.Parse("#6D6D75"));
+            rails[i].Opacity = i == idx ? 1 : i < idx ? 0.85 : 0.45;
+        rails[Math.Clamp(idx, 0, rails.Length - 1)].FontWeight = FontWeight.SemiBold;
     }
 
     async Task WaitPause()
@@ -53,8 +89,40 @@ public partial class MainWindow : Window
         while (_paused) await Task.Delay(120);
     }
 
+    async Task PollClipboard()
+    {
+        if (_settings.ClipboardWatch != true || Clipboard == null) return;
+        try
+        {
+            var text = await Clipboard.GetTextAsync();
+            if (string.IsNullOrWhiteSpace(text) || text == _lastClip) return;
+            _lastClip = text;
+            var urls = text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(u => u.StartsWith("http://") || u.StartsWith("https://")).ToList();
+            if (urls.Count == 0) return;
+            var existing = UrlBox.Text ?? "";
+            foreach (var u in urls)
+                if (!existing.Contains(u, StringComparison.OrdinalIgnoreCase))
+                    existing = string.IsNullOrWhiteSpace(existing) ? u : existing.TrimEnd() + "\n" + u;
+            UrlBox.Text = existing;
+            Log($"Clipboard: {urls.Count} URL(s)");
+            if (_settings.ClipboardAutoRun && !_running) await RunAsync();
+        }
+        catch { /* clipboard can be empty */ }
+    }
+
+    void ExportHashes()
+    {
+        var rows = _items.Where(i => i.Sha256 != null).Select(i => $"{i.Sha256}  {i.Filename}");
+        var path = Path.Combine(_settings.DownloadRoot, "fathomrail-sha256.txt");
+        Directory.CreateDirectory(_settings.DownloadRoot);
+        File.WriteAllLines(path, rows);
+        Log("Wrote " + path);
+    }
+
     async Task RunAsync()
     {
+        if (_running) return;
         var urls = (UrlBox.Text ?? "").Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Where(u => u.StartsWith("http")).ToList();
         if (urls.Count == 0) { Log("Paste one or more http(s) URLs"); return; }
@@ -63,6 +131,8 @@ public partial class MainWindow : Window
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
         _paused = false;
+        _running = true;
+        _started = DateTimeOffset.UtcNow;
         _items.Clear();
         MediaList.Items.Clear();
         BtnRun.IsEnabled = false;
@@ -105,7 +175,7 @@ public partial class MainWindow : Window
                     _items.Add(item);
                     MediaList.Items.Add($"{item.OrderIndex:000}  {item.Kind}  {item.Filename}");
                 }
-                Log($"Found {result.Items.Count} media on {result.Followed.Count} page(s) · keeping page order");
+                Log($"{result.Items.FirstOrDefault()?.Extractor ?? "generic"} found {result.Items.Count} media on {result.Followed.Count} page(s)");
             }
             if (_items.Count == 0) { Log("Nothing matched"); return; }
 
@@ -116,8 +186,6 @@ public partial class MainWindow : Window
                 await WaitPause();
                 await crawl.ProbeAsync(item, _settings, ct);
                 if (_settings.NumberFiles) item.Filename = Organize.OrderedName(item.OrderIndex, item.Filename);
-                Dispatcher.UIThread.Post(() => GridItems.ItemsSource = null);
-                Dispatcher.UIThread.Post(() => GridItems.ItemsSource = _items);
             }, ct);
 
             SetStage(3);
@@ -128,18 +196,32 @@ public partial class MainWindow : Window
                 : $"Downloading {selected.Count} files · {workers} workers");
             var progress = new Progress<MediaItem>(_ => Dispatcher.UIThread.Post(() =>
             {
-                HdrStats.Text = $"{_items.Count(i => i.Phase == ItemPhase.Complete)}/{_items.Count} files";
+                var done = _items.Count(i => i.Phase is ItemPhase.Complete or ItemPhase.Skipped);
+                HdrStats.Text = $"{done}/{_items.Count} files";
+                MonTitle.Text = $"DOWNLOAD MONITOR  {done}/{_items.Count}";
             }));
             await DownloadService.RunPool(selected, workers, async item =>
             {
                 await WaitPause();
                 await dl.DownloadAsync(item, _settings, progress, ct);
-                Log(item.Phase == ItemPhase.Complete ? $"Saved {item.Filename}" : $"{item.Filename}: {item.Error}");
+                Log(item.Phase == ItemPhase.Complete ? $"Saved {item.Filename} · {(item.Sha256 ?? "")[..Math.Min(8, item.Sha256?.Length ?? 0)]}"
+                    : item.Phase == ItemPhase.Skipped ? $"Skipped {item.Filename}"
+                    : $"{item.Filename}: {item.Error}");
             }, ct);
 
             SetStage(4);
-            var done = _items.Count(i => i.Phase == ItemPhase.Complete);
-            Log($"Verified {done} file(s) in {_settings.DownloadRoot}");
+            var ok = _items.Count(i => i.Phase == ItemPhase.Complete);
+            Log($"Verified {ok} file(s) in {_settings.DownloadRoot}");
+            if (!string.IsNullOrWhiteSpace(_settings.WebhookUrl))
+            {
+                var (okHook, err) = await WebhookClient.PostAsync(_settings.WebhookUrl, WebhookClient.JobPayload("complete", urls[0], _started, _items), ct);
+                Log(okHook ? "Webhook sent" : "Webhook: " + err);
+            }
+            if (_settings.SchedulerEnabled)
+            {
+                _settings.NextRunAt = DateTimeOffset.UtcNow.AddMinutes(Math.Max(5, _settings.SchedulerMinutes));
+                Log($"Next scheduled run {_settings.NextRunAt:t}");
+            }
         }
         catch (OperationCanceledException)
         {
@@ -151,6 +233,7 @@ public partial class MainWindow : Window
         }
         finally
         {
+            _running = false;
             BtnRun.IsEnabled = true;
             BtnStop.IsEnabled = false;
             BtnPause.IsEnabled = false;

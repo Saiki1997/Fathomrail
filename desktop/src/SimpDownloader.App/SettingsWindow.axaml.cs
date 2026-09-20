@@ -14,6 +14,16 @@ public partial class SettingsWindow : Window
         WorkersBox.Value = settings.Workers;
         RetriesBox.Value = settings.Retries;
         MaxBox.Value = settings.MaxFileMb;
+        BwBox.Value = settings.BandwidthKbps;
+        GapBox.Value = settings.HostGapMs;
+        HostBox.Value = settings.HostMaxConcurrent;
+        HashBox.IsChecked = settings.VerifyHash;
+        SkipHashBox.IsChecked = settings.SkipKnownHashes;
+        ClipBox.IsChecked = settings.ClipboardWatch;
+        ClipRunBox.IsChecked = settings.ClipboardAutoRun;
+        SchedBox.IsChecked = settings.SchedulerEnabled;
+        SchedMinBox.Value = settings.SchedulerMinutes;
+        HookBox.Text = settings.WebhookUrl;
         ImgBox.IsChecked = settings.IncludeImages;
         VidBox.IsChecked = settings.IncludeVideos;
         AudBox.IsChecked = settings.IncludeAudio;
@@ -50,6 +60,11 @@ public partial class SettingsWindow : Window
                 CookieBox.Text = "# " + ex.Message + "\n" + (CookieBox.Text ?? "");
             }
         };
+        BtnClearHash.Click += (_, _) =>
+        {
+            HashStore.Clear();
+            BtnClearHash.Content = "Hashes cleared";
+        };
         BtnOk.Click += (_, _) =>
         {
             settings.FolderName = FolderBox.Text ?? settings.FolderName;
@@ -57,6 +72,16 @@ public partial class SettingsWindow : Window
             settings.Workers = (int)(WorkersBox.Value ?? 4);
             settings.Retries = (int)(RetriesBox.Value ?? 2);
             settings.MaxFileMb = (int)(MaxBox.Value ?? 80);
+            settings.BandwidthKbps = (int)(BwBox.Value ?? 0);
+            settings.HostGapMs = (int)(GapBox.Value ?? 250);
+            settings.HostMaxConcurrent = (int)(HostBox.Value ?? 2);
+            settings.VerifyHash = HashBox.IsChecked == true;
+            settings.SkipKnownHashes = SkipHashBox.IsChecked == true;
+            settings.ClipboardWatch = ClipBox.IsChecked == true;
+            settings.ClipboardAutoRun = ClipRunBox.IsChecked == true;
+            settings.SchedulerEnabled = SchedBox.IsChecked == true;
+            settings.SchedulerMinutes = (int)(SchedMinBox.Value ?? 60);
+            settings.WebhookUrl = HookBox.Text ?? "";
             settings.IncludeImages = ImgBox.IsChecked == true;
             settings.IncludeVideos = VidBox.IsChecked == true;
             settings.IncludeAudio = AudBox.IsChecked == true;
@@ -71,6 +96,8 @@ public partial class SettingsWindow : Window
                 3 => OrganizeBy.ForumPost,
                 _ => OrganizeBy.Flat,
             };
+            if (settings.SchedulerEnabled)
+                settings.NextRunAt = DateTimeOffset.UtcNow.AddMinutes(Math.Max(5, settings.SchedulerMinutes));
             Close();
         };
     }

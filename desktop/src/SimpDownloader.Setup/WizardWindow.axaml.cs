@@ -61,7 +61,7 @@ public partial class WizardWindow : Window
 
     Control Welcome() => Col(
         Title("Fathomrail Setup"),
-        Body("This wizard installs Fathomrail 1.0, a five-stage gallery downloader with a live monitor."),
+        Body("This wizard installs Fathomrail 1.1, a five-stage gallery downloader with a live monitor."),
         Body("You can choose the install folder and whether to create Desktop and Start Menu shortcuts."));
 
     Control Options()

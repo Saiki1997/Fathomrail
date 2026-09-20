@@ -1,9 +1,8 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="SimpDownloader.App.SettingsWindow"
-        Title="Settings" Width="480" Height="640"
-        WindowStartupLocation="CenterOwner"
-        Background="#16161A" Foreground="#F3F3F4">
+        Title="Settings" Width="520" Height="720"
+        WindowStartupLocation="CenterOwner">
   <ScrollViewer Padding="20">
     <StackPanel Spacing="10">
       <TextBlock Text="Download location"/>
@@ -28,6 +27,22 @@
       <NumericUpDown x:Name="RetriesBox" Minimum="0" Maximum="6"/>
       <TextBlock Text="Max file size (MB)"/>
       <NumericUpDown x:Name="MaxBox" Minimum="1" Maximum="80"/>
+      <TextBlock Text="Bandwidth cap KB/s (0 = off)"/>
+      <NumericUpDown x:Name="BwBox" Minimum="0" Maximum="100000"/>
+      <TextBlock Text="Per-host gap (ms)"/>
+      <NumericUpDown x:Name="GapBox" Minimum="0" Maximum="5000"/>
+      <TextBlock Text="Max concurrent / host"/>
+      <NumericUpDown x:Name="HostBox" Minimum="1" Maximum="8"/>
+      <CheckBox x:Name="HashBox" Content="SHA-256 verify after each file"/>
+      <CheckBox x:Name="SkipHashBox" Content="Skip files with a known SHA-256"/>
+      <Button x:Name="BtnClearHash" Content="Clear remembered hashes"/>
+      <CheckBox x:Name="ClipBox" Content="Watch clipboard for URLs"/>
+      <CheckBox x:Name="ClipRunBox" Content="Auto-run when a clipboard URL arrives"/>
+      <CheckBox x:Name="SchedBox" Content="Repeat this job on a timer"/>
+      <TextBlock Text="Scheduler interval (minutes)"/>
+      <NumericUpDown x:Name="SchedMinBox" Minimum="5" Maximum="10080"/>
+      <TextBlock Text="Finish webhook (HTTPS POST JSON)"/>
+      <TextBox x:Name="HookBox" Watermark="https://example.com/hook"/>
       <CheckBox x:Name="ImgBox" Content="Images"/>
       <CheckBox x:Name="VidBox" Content="Videos"/>
       <CheckBox x:Name="AudBox" Content="Audio"/>

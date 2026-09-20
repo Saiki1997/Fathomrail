@@ -1,8 +1,11 @@
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+
 namespace SimpDownloader.Core;
 
 public enum CrawlProfile { Fast, Balanced, Deep }
 public enum MediaKind { Image, Video, Audio, Other }
-public enum ItemPhase { Queued, Resolving, Fetching, Verifying, Complete, Failed }
+public enum ItemPhase { Queued, Resolving, Fetching, Verifying, Complete, Failed, Skipped }
 public enum OrganizeBy { Flat, Post, Forum, ForumPost }
 
 public sealed class AppSettings
@@ -11,7 +14,7 @@ public sealed class AppSettings
     public int Workers { get; set; } = 4;
     public int Retries { get; set; } = 2;
     public int RetryDelayMs { get; set; } = 800;
-    public string FolderName { get; set; } = "SimpDownloads";
+    public string FolderName { get; set; } = "Fathomrail";
     public string Cookies { get; set; } = "";
     public bool IncludeImages { get; set; } = true;
     public bool IncludeVideos { get; set; } = true;
@@ -24,25 +27,53 @@ public sealed class AppSettings
     public bool NumberFiles { get; set; } = true;
     public bool SequentialDownload { get; set; } = true;
     public string ChromeProfile { get; set; } = "Default";
+    public bool LightTheme { get; set; }
+    public bool ClipboardWatch { get; set; }
+    public bool ClipboardAutoRun { get; set; }
+    public int BandwidthKbps { get; set; }
+    public int HostGapMs { get; set; } = 250;
+    public int HostMaxConcurrent { get; set; } = 2;
+    public bool VerifyHash { get; set; } = true;
+    public bool SkipKnownHashes { get; set; } = true;
+    public string WebhookUrl { get; set; } = "";
+    public bool SchedulerEnabled { get; set; }
+    public int SchedulerMinutes { get; set; } = 60;
+    public DateTimeOffset? NextRunAt { get; set; }
 }
 
-public sealed class MediaItem
+public sealed class MediaItem : INotifyPropertyChanged
 {
+    string _filename = "file.bin";
+    ItemPhase _phase = ItemPhase.Queued;
+    long _bytesDone;
+    long? _bytesTotal;
+    string? _error;
+    double _speedBps;
+    string? _sha256;
+    string _url = "";
+
     public string Id { get; init; } = Guid.NewGuid().ToString("n");
-    public string Url { get; init; } = "";
-    public string Filename { get; set; } = "file.bin";
+    public string Url { get => _url; set { _url = value; OnChanged(); } }
+    public string SourcePage { get; set; } = "";
+    public string Filename { get => _filename; set { _filename = value; OnChanged(); } }
     public MediaKind Kind { get; set; }
     public string? Mime { get; set; }
-    public long? BytesTotal { get; set; }
-    public long BytesDone { get; set; }
-    public ItemPhase Phase { get; set; } = ItemPhase.Queued;
+    public long? BytesTotal { get => _bytesTotal; set { _bytesTotal = value; OnChanged(); } }
+    public long BytesDone { get => _bytesDone; set { _bytesDone = value; OnChanged(); } }
+    public ItemPhase Phase { get => _phase; set { _phase = value; OnChanged(); } }
     public bool Selected { get; set; } = true;
-    public string? Error { get; set; }
-    public double SpeedBps { get; set; }
+    public string? Error { get => _error; set { _error = value; OnChanged(); } }
+    public double SpeedBps { get => _speedBps; set { _speedBps = value; OnChanged(); } }
     public int OrderIndex { get; set; }
     public string? ForumId { get; set; }
     public string? PostId { get; set; }
     public string? ThreadId { get; set; }
+    public string Extractor { get; set; } = "generic";
+    public string? ResolvedUrl { get; set; }
+    public string? Sha256 { get => _sha256; set { _sha256 = value; OnChanged(); } }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+    void OnChanged([CallerMemberName] string? n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 }
 
 public sealed class DiscoverResult

@@ -36,7 +36,7 @@ public sealed class CrawlService
             {
                 UrlGuard.AssertPublicHttpUrl(page);
                 using var req = new HttpRequestMessage(HttpMethod.Get, page);
-                req.Headers.TryAddWithoutValidation("User-Agent", "SimpDownloader/2.0");
+                req.Headers.TryAddWithoutValidation("User-Agent", "Fathomrail/1.0");
                 var cookie = CookieJar.HeaderFor(settings.Cookies, page);
                 if (cookie != null) req.Headers.TryAddWithoutValidation("Cookie", cookie);
                 using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -103,7 +103,7 @@ public sealed class CrawlService
         {
             UrlGuard.AssertPublicHttpUrl(item.Url);
             using var req = new HttpRequestMessage(HttpMethod.Head, item.Url);
-            req.Headers.TryAddWithoutValidation("User-Agent", "SimpDownloader/2.0");
+            req.Headers.TryAddWithoutValidation("User-Agent", "Fathomrail/1.0");
             var cookie = CookieJar.HeaderFor(settings.Cookies, item.Url);
             if (cookie != null) req.Headers.TryAddWithoutValidation("Cookie", cookie);
             using var res = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);

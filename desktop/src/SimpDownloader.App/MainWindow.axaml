@@ -10,8 +10,8 @@
     <Border DockPanel.Dock="Top" Padding="16,12" BorderBrush="#26F3F3F4" BorderThickness="0,0,0,1">
       <Grid ColumnDefinitions="Auto,*,Auto">
         <StackPanel Spacing="2">
-          <TextBlock FontSize="16" FontWeight="SemiBold" Text="SimpDownloader"/>
-          <TextBlock FontSize="11" Foreground="#9A9AA3" Text="C# rebuild  ·  crawl → discover → resolve → download → finalize"/>
+          <TextBlock FontSize="16" FontWeight="SemiBold" Text="Fathomrail"/>
+          <TextBlock FontSize="11" Foreground="#9A9AA3" Text="v1.0  ·  crawl → discover → resolve → download → finalize"/>
         </StackPanel>
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
           <TextBlock x:Name="HdrStats" FontFamily="Consolas" FontSize="12" Foreground="#9A9AA3" VerticalAlignment="Center"/>

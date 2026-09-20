@@ -10,7 +10,7 @@ namespace SimpDownloader.Setup;
 public partial class WizardWindow : Window
 {
     int _step;
-    string _dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "SimpDownloader");
+    string _dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Fathomrail");
     bool _desktop = true;
     bool _startMenu = true;
     TextBox? _dirBox;
@@ -60,8 +60,8 @@ public partial class WizardWindow : Window
     }
 
     Control Welcome() => Col(
-        Title("SimpDownloader Setup"),
-        Body("This wizard installs SimpDownloader 2.0, the C# rebuild of the original media-thread downloader."),
+        Title("Fathomrail Setup"),
+        Body("This wizard installs Fathomrail 1.0, a five-stage gallery downloader with a live monitor."),
         Body("You can choose the install folder and whether to create Desktop and Start Menu shortcuts."));
 
     Control Options()
@@ -80,7 +80,7 @@ public partial class WizardWindow : Window
 
     Control Done() => Col(
         Title("Completed"),
-        Body("SimpDownloader is installed. Use Finish to close the wizard, then run SimpDownloader.exe from the install folder or a shortcut."));
+        Body("Fathomrail is installed. Use Finish to close the wizard, then run Fathomrail.exe from the install folder or a shortcut."));
 
     static TextBlock Title(string t) => new() { Text = t, FontSize = 22, FontWeight = FontWeight.Medium, Margin = new Thickness(0, 0, 0, 12) };
     static TextBlock Body(string t) => new() { Text = t, TextWrapping = TextWrapping.Wrap, Foreground = new SolidColorBrush(Color.Parse("#9A9AA3")), Margin = new Thickness(0, 0, 0, 8) };
@@ -109,11 +109,11 @@ public partial class WizardWindow : Window
                 Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
                 entry.ExtractToFile(dest, true);
             }
-            var exe = Path.Combine(_dir, "SimpDownloader.exe");
+            var exe = Path.Combine(_dir, "Fathomrail.exe");
             if (_desktop) TryShortcut(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), exe);
             if (_startMenu)
             {
-                var sm = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "SimpDownloader");
+                var sm = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Fathomrail");
                 Directory.CreateDirectory(sm);
                 TryShortcut(sm, exe);
             }
@@ -137,10 +137,10 @@ public partial class WizardWindow : Window
         var bat = Path.Combine(_dir, "Uninstall.bat");
         File.WriteAllText(bat, $"""
             @echo off
-            echo Removing SimpDownloader...
+            echo Removing Fathomrail...
             rmdir /s /q "{_dir}"
-            del "%USERPROFILE%\Desktop\SimpDownloader.lnk" 2>nul
-            rmdir /s /q "%APPDATA%\Microsoft\Windows\Start Menu\Programs\SimpDownloader" 2>nul
+            del "%USERPROFILE%\Desktop\Fathomrail.lnk" 2>nul
+            rmdir /s /q "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Fathomrail" 2>nul
             """);
     }
 
@@ -150,21 +150,21 @@ public partial class WizardWindow : Window
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                File.WriteAllText(Path.Combine(folder, "SimpDownloader.url"), $"[InternetShortcut]\r\nURL=file:///{target.Replace("\\", "/")}\r\n");
+                File.WriteAllText(Path.Combine(folder, "Fathomrail.url"), $"[InternetShortcut]\r\nURL=file:///{target.Replace("\\", "/")}\r\n");
                 return;
             }
             var t = Type.GetTypeFromProgID("WScript.Shell");
             if (t == null) return;
             dynamic shell = Activator.CreateInstance(t)!;
-            var link = shell.CreateShortcut(Path.Combine(folder, "SimpDownloader.lnk"));
+            var link = shell.CreateShortcut(Path.Combine(folder, "Fathomrail.lnk"));
             link.TargetPath = target;
             link.WorkingDirectory = Path.GetDirectoryName(target);
-            link.Description = "SimpDownloader";
+            link.Description = "Fathomrail";
             link.Save();
         }
         catch
         {
-            File.WriteAllText(Path.Combine(folder, "SimpDownloader.url"), $"[InternetShortcut]\r\nURL=file:///{target.Replace("\\", "/")}\r\n");
+            File.WriteAllText(Path.Combine(folder, "Fathomrail.url"), $"[InternetShortcut]\r\nURL=file:///{target.Replace("\\", "/")}\r\n");
         }
     }
 }

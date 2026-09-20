@@ -6,12 +6,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
-    <Version>2.0.0</Version>
-    <AssemblyName>SimpDownloader</AssemblyName>
+    <Version>1.0.0</Version>
+    <AssemblyName>Fathomrail</AssemblyName>
     <RootNamespace>SimpDownloader.App</RootNamespace>
-    <Product>SimpDownloader</Product>
-    <Company>SimpDownloader</Company>
-    <Description>Media thread downloader — crawl, discover, resolve, download, verify</Description>
+    <Product>Fathomrail</Product>
+    <Company>Fathomrail</Company>
+    <Description>Five-stage gallery downloader — crawl, discover, resolve, download, verify</Description>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.2.5" />

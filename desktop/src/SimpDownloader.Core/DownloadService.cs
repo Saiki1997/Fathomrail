@@ -23,7 +23,7 @@ public sealed class DownloadService
             {
                 UrlGuard.AssertPublicHttpUrl(item.Url);
                 using var req = new HttpRequestMessage(HttpMethod.Get, item.Url);
-                req.Headers.TryAddWithoutValidation("User-Agent", "SimpDownloader/2.0");
+                req.Headers.TryAddWithoutValidation("User-Agent", "Fathomrail/1.0");
                 var cookie = CookieJar.HeaderFor(settings.Cookies, item.Url);
                 if (cookie != null) req.Headers.TryAddWithoutValidation("Cookie", cookie);
                 using var res = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);

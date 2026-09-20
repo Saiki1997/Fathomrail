@@ -15,6 +15,15 @@ Inspired by the pipeline shape of [gallery-dl](https://github.com/mikf/gallery-d
 
 > Only download content you have the right to fetch. Local and private hosts are blocked.
 
+## Downloads
+
+Windows x64 builds from [Releases](https://github.com/Saiki1997/Fathomrail/releases):
+
+| File | What it is |
+| --- | --- |
+| `Fathomrail-Setup.exe` | Setup wizard — pick install folder, desktop + Start Menu shortcuts |
+| `Fathomrail-Portable.zip` | Extract and run `Fathomrail.exe` — no install, no registry |
+
 ## How to use
 
 ![How to use Fathomrail](docs/how-to.gif)

@@ -1,7 +1,7 @@
-#define MyAppName "SimpDownloader"
-#define MyAppVersion "2.0.0"
-#define MyAppPublisher "SimpDownloader"
-#define MyAppExeName "SimpDownloader.exe"
+#define MyAppName "Fathomrail"
+#define MyAppVersion "1.0.0"
+#define MyAppPublisher "Fathomrail"
+#define MyAppExeName "Fathomrail.exe"
 
 [Setup]
 AppId={{8F3C1A2B-9D44-4E6A-B7C1-21F0A9D4E8B2}
@@ -13,7 +13,7 @@ DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=no
 PrivilegesRequiredOverridesAllowed=dialog
 OutputDir=..\..\artifacts
-OutputBaseFilename=SimpDownloader-Setup
+OutputBaseFilename=Fathomrail-Setup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern

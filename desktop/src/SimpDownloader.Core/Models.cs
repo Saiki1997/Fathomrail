@@ -19,7 +19,7 @@ public sealed class AppSettings
     public bool SkipDuplicates { get; set; } = true;
     public int MaxFileMb { get; set; } = 80;
     public string DownloadRoot { get; set; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "SimpDownloader");
+        Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Fathomrail");
     public OrganizeBy OrganizeBy { get; set; } = OrganizeBy.ForumPost;
     public bool NumberFiles { get; set; } = true;
     public bool SequentialDownload { get; set; } = true;

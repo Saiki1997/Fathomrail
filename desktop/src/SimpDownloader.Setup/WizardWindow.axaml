@@ -1,7 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="SimpDownloader.Setup.WizardWindow"
-        Title="SimpDownloader Setup"
+        Title="Fathomrail Setup"
         Width="560" Height="420"
         CanResize="False"
         WindowStartupLocation="CenterScreen"

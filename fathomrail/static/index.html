@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Fathomrail</title>
+  <link rel="icon" href="/static/logo.svg"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap"/>
+  <link rel="stylesheet" href="/static/app.css"/>
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <img src="/static/logo.svg" width="28" height="28" alt=""/>
+      <div>
+        <h1>Fathomrail</h1>
+        <p class="tag">v2.0 · crawl → discover → resolve → download → verify</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <span id="hdr-stats" class="mono muted"></span>
+      <button type="button" id="btn-theme" title="Toggle theme">Theme</button>
+      <button type="button" id="btn-sched">Scheduler</button>
+      <button type="button" id="btn-settings">Settings</button>
+    </div>
+  </header>
+
+  <section class="seeds">
+    <label class="muted">Seed URLs — one per line</label>
+    <div class="seed-row">
+      <textarea id="urls" placeholder="https://example.com/gallery"></textarea>
+      <div class="seed-btns">
+        <select id="profile">
+          <option value="fast">Fast</option>
+          <option value="balanced" selected>Balanced</option>
+          <option value="deep">Deep</option>
+        </select>
+        <button type="button" class="primary" id="btn-run">Run</button>
+        <button type="button" id="btn-pause" disabled>Pause</button>
+        <button type="button" id="btn-stop" disabled>Stop</button>
+      </div>
+    </div>
+    <div class="chips">
+      <button type="button" class="chip" data-sample="picsum">Sample stills (Lorem Picsum)</button>
+      <button type="button" class="chip" data-sample="direct">Direct media URLs</button>
+      <button type="button" class="chip" id="btn-clip">Watch clipboard</button>
+    </div>
+  </section>
+
+  <div class="rail" id="rail">
+    <span data-i="0">CRAWL</span><span data-i="1">DISCOVER</span><span data-i="2">RESOLVE</span><span data-i="3">DOWNLOAD</span><span data-i="4">FINALIZE</span>
+  </div>
+
+  <main class="stage">
+    <section class="preview">
+      <h2 id="preview-title">Ready when you are</h2>
+      <ul id="media-list" class="media-list"></ul>
+    </section>
+    <aside class="activity">
+      <div class="aside-head">
+        <h2>ACTIVITY</h2>
+        <button type="button" id="btn-clear">Clear</button>
+      </div>
+      <ul id="log" class="log"></ul>
+    </aside>
+  </main>
+
+  <section class="monitor">
+    <button type="button" class="mon-toggle" id="mon-toggle">DOWNLOAD MONITOR <span id="mon-stats">0/0 · 0 B</span></button>
+    <div id="mon-body" class="mon-body">
+      <table>
+        <thead><tr><th>File</th><th>Extractor</th><th>Phase</th><th>Done</th><th>SHA-256</th><th>Error</th></tr></thead>
+        <tbody id="mon-rows"></tbody>
+      </table>
+    </div>
+    <div class="mon-actions">
+      <a href="/api/zip" id="btn-zip">Save completed ZIP</a>
+      <a href="/api/hashes">SHA-256 list</a>
+    </div>
+  </section>
+
+  <dialog id="dlg-settings">
+    <form method="dialog" class="dlg">
+      <h2>Settings</h2>
+      <label>Download folder<input id="s-root" type="text"/></label>
+      <label>Folder name<input id="s-folder" type="text"/></label>
+      <label>Organize by
+        <select id="s-org">
+          <option value="flat">One folder</option>
+          <option value="post">Post ID</option>
+          <option value="forum">Forum ID</option>
+          <option value="forumPost">Forum / post</option>
+        </select>
+      </label>
+      <label class="check"><input type="checkbox" id="s-num"/> Number files in page order</label>
+      <label class="check"><input type="checkbox" id="s-seq"/> Download strictly in order</label>
+      <label>Workers<input id="s-workers" type="number" min="1" max="8"/></label>
+      <label>Retries<input id="s-retries" type="number" min="0" max="6"/></label>
+      <label>Max file MB<input id="s-max" type="number" min="1" max="80"/></label>
+      <label>Bandwidth cap KB/s (0 = off)<input id="s-bw" type="number" min="0"/></label>
+      <label>Per-host gap ms<input id="s-gap" type="number" min="0"/></label>
+      <label>Max concurrent / host<input id="s-host" type="number" min="1" max="8"/></label>
+      <label class="check"><input type="checkbox" id="s-hash"/> SHA-256 verify</label>
+      <label class="check"><input type="checkbox" id="s-skiphash"/> Skip known hashes</label>
+      <label class="check"><input type="checkbox" id="s-img"/> Images</label>
+      <label class="check"><input type="checkbox" id="s-vid"/> Videos</label>
+      <label class="check"><input type="checkbox" id="s-aud"/> Audio</label>
+      <label>Finish webhook<input id="s-hook" type="url" placeholder="https://example.com/hook"/></label>
+      <label>Cookies
+        <textarea id="s-cookies" placeholder="# Netscape HTTP Cookie File or Chrome JSON"></textarea>
+      </label>
+      <div class="dlg-actions">
+        <button type="button" id="s-chrome">Load from Google Chrome</button>
+        <button type="submit" class="primary" id="s-save">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-sched">
+    <form method="dialog" class="dlg">
+      <h2>Job scheduler</h2>
+      <label class="check"><input type="checkbox" id="sc-on"/> Repeat this job on a timer</label>
+      <label>Interval (minutes)<input id="sc-min" type="number" min="5" max="10080"/></label>
+      <p class="muted">Uses the URLs currently in the seed box. A webhook fires when a run finishes.</p>
+      <div class="dlg-actions"><button type="submit" class="primary">Save</button></div>
+    </form>
+  </dialog>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

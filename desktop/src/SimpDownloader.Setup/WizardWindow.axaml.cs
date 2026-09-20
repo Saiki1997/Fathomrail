@@ -61,7 +61,7 @@ public partial class WizardWindow : Window
 
     Control Welcome() => Col(
         Title("Fathomrail Setup"),
-        Body("This wizard installs Fathomrail 1.2 — the same app as the live preview, in a desktop window."),
+        Body("This wizard installs Fathomrail 2.0, a Python gallery downloader for Windows."),
         Body("You can choose the install folder and whether to create Desktop and Start Menu shortcuts."));
 
     Control Options()

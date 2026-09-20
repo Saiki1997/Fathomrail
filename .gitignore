@@ -1,2 +1,3 @@
 dist-electron
-electron/node_modules
+electron/node_modules__pycache__/
+*.pyc

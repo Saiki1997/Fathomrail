@@ -17,7 +17,7 @@ Inspired by the pipeline shape of [gallery-dl](https://github.com/mikf/gallery-d
 
 ## Downloads
 
-Windows x64 builds from [Releases](https://github.com/Saiki1997/Fathomrail/releases/tag/v1.2.0):
+Windows x64 builds from [Releases](https://github.com/Saiki1997/Fathomrail/releases/tag/v1.2.1):
 
 | File | What it is |
 | --- | --- |

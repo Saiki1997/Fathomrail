@@ -1,5 +1,4 @@
-import { app, BrowserWindow, dialog, shell } from "electron";
-import { spawn } from "node:child_process";
+import { app, BrowserWindow, dialog, shell, utilityProcess } from "electron";
 import http from "node:http";
 import net from "node:net";
 import path from "node:path";
@@ -30,7 +29,12 @@ function waitFor(url, timeoutMs = 45000) {
     const tick = () => {
       const req = http.get(url, (res) => {
         res.resume();
-        resolve(true);
+        if (res.statusCode && res.statusCode >= 200 && res.statusCode < 500) {
+          resolve(true);
+          return;
+        }
+        if (Date.now() - start > timeoutMs) reject(new Error("App server returned " + res.statusCode));
+        else setTimeout(tick, 250);
       });
       req.on("error", () => {
         if (Date.now() - start > timeoutMs) reject(new Error("App server did not start"));
@@ -43,34 +47,41 @@ function waitFor(url, timeoutMs = 45000) {
 
 function resourcePaths() {
   if (app.isPackaged) {
+    const root = path.join(process.resourcesPath, "output");
     return {
-      boot: path.join(__dirname, "boot-server.mjs"),
-      staticDir: path.join(process.resourcesPath, "output", "static"),
-      entry: path.join(process.resourcesPath, "output", "server", "index.mjs"),
+      boot: path.join(root, "boot-server.mjs"),
+      staticDir: path.join(root, "static"),
+      entry: path.join(root, "server", "index.mjs"),
+      html: path.join(root, "prerender.html"),
     };
   }
   return {
     boot: path.join(__dirname, "boot-server.mjs"),
     staticDir: path.join(__dirname, "..", ".vercel", "output", "static"),
     entry: path.join(__dirname, "..", ".vercel", "output", "functions", "__server.func", "index.mjs"),
+    html: path.join(__dirname, "prerender.html"),
   };
 }
 
 async function startServer() {
   if (process.env.FATHOMRAIL_DEV === "1") return 8080;
   const port = await pickPort();
-  const { boot, staticDir, entry } = resourcePaths();
-  if (!fs.existsSync(entry)) throw new Error(`Missing server bundle at ${entry}`);
-  child = spawn(process.execPath, [boot], {
-    env: {
-      ...process.env,
-      ELECTRON_RUN_AS_NODE: "1",
-      PORT: String(port),
-      FATHOMRAIL_STATIC: staticDir,
-      FATHOMRAIL_ENTRY: entry,
-    },
+  const { boot, staticDir, entry, html } = resourcePaths();
+  if (!fs.existsSync(boot)) throw new Error(`Missing boot server at ${boot}`);
+  if (!fs.existsSync(html)) throw new Error(`Missing UI shell at ${html}`);
+  const env = {};
+  for (const [k, v] of Object.entries(process.env)) {
+    if (typeof v === "string") env[k] = v;
+  }
+  env.PORT = String(port);
+  env.FATHOMRAIL_STATIC = staticDir;
+  env.FATHOMRAIL_ENTRY = entry;
+  env.FATHOMRAIL_HTML = html;
+  env.NODE_ENV = "production";
+  child = utilityProcess.fork(boot, [], {
+    serviceName: "fathomrail-server",
     stdio: "pipe",
-    windowsHide: true,
+    env,
   });
   child.stderr?.on("data", (d) => process.stderr.write(d));
   child.stdout?.on("data", (d) => process.stdout.write(d));
@@ -117,10 +128,10 @@ app.whenReady().then(async () => {
 });
 
 app.on("window-all-closed", () => {
-  if (child && !child.killed) child.kill();
+  child?.kill();
   app.quit();
 });
 
 app.on("before-quit", () => {
-  if (child && !child.killed) child.kill();
+  child?.kill();
 });

@@ -1,6 +1,6 @@
 {
   "name": "fathomrail",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Five-stage gallery downloader with a live monitor.",
   "author": "Saiki1997",
   "main": "electron/main.mjs",

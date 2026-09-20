@@ -13,6 +13,10 @@ extraResources:
     to: output/static
   - from: .vercel/output/functions/__server.func
     to: output/server
+  - from: electron/boot-server.mjs
+    to: output/boot-server.mjs
+  - from: electron/prerender.html
+    to: output/prerender.html
 asar: true
 forceCodeSigning: false
 win:
